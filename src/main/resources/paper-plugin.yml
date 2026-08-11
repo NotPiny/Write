@@ -1,0 +1,13 @@
+name: Write
+description: $description
+prefix: Write
+version: '${version}'
+
+main: dev.piny.write.Write
+bootstrapper: dev.piny.write.WriteBootstrap
+loader: dev.piny.write.WriteLoader
+api-version: '26.2'
+load: POSTWORLD
+
+authors: [ Ember <piny.dev> ]
+website: https://modrinth.com/plugin/write

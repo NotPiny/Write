@@ -1,0 +1,36 @@
+pack:
+  host:
+    # Method used to host any applicable resource packs.
+    # Options:
+    # "cloud" - Resource packs will be sent to mcpacks.dev. No affiliation, just happens to provide programmatic pack hosting. (default)
+    # "none" - Resource packs will not be hosted. Players will need to manually download and install the resource pack, or you need to provide your own hosting solution.
+    method: "cloud"
+    # The delay in ticks after Write fully loads before scanning for resource packs.
+    scan_delay_ticks: 200
+
+tasks:
+  block:
+    resync_lighting:
+      # Resyncs the lighting of all custom blocks in the world.
+      interval_ticks: 20
+      start_delay_ticks: 60
+    persist_block_instances:
+      log: false
+      # Saves all custom block in the world to disk.
+      interval_ticks: 1200
+      start_delay_ticks: 2400
+      # The delay in ticks before a block is saved to disk after being modified.
+      on_place_delay: 20
+      on_break_delay: 20
+      # The delay in ticks before block instances are loaded from disk after the plugin starts. (If within 100 ticks of start_delay_ticks, set to start_delay_ticks - 100)
+      load_delay_ticks: 40
+
+cooldowns:
+  block:
+    place_delay_ms: 100
+
+# You probably shouldn't change these values unless you really know what you're doing.
+meta:
+  checkpoints:
+    first_run_op_notify_triggered: false
+    first_save_triggered: false
