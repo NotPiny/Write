@@ -1,9 +1,9 @@
 # IDE/Testing
 .idea/
+/.gradle/
 build/
 run/
+*.jar
 
 # KDE
 .directory
-# Project exclude paths
-/.gradle/

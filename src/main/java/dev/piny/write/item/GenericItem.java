@@ -37,7 +37,7 @@ public class GenericItem {
     public GenericItem(NamespacedKey key) {
         this.key = key;
         boolean isBlock = Write.BLOCK_REGISTRY.stream().anyMatch(block -> block.key().equals(key));
-        this.name = Component.translatable("item." + key.getNamespace() + "." + key.getKey());
+        this.name = Component.translatable((isBlock ? "block." : "item.") + key.getNamespace() + "." + key.getKey());
     }
 
     /**
@@ -93,9 +93,8 @@ public class GenericItem {
     }
 
     public ItemStack getItemStack() {
-        boolean isBlock = Write.BLOCK_REGISTRY.stream().findAny()
-                .filter(block -> block.key().equals(key))
-                .isPresent();
+        boolean isBlock = Write.BLOCK_REGISTRY.stream()
+                .anyMatch(block -> block.key().equals(key));
 
         ItemStack itemStack = Bukkit.getServer().getItemFactory().createItemStack((isBlock ? "structure_void" : "popped_chorus_fruit") + "[item_model=\"" + key.getNamespace() + ":" + (isBlock ? "block/" : "") + key.getKey() + "\",max_stack_size=" + maxStackSize + ",rarity=\"common\"]");
         itemStack.editMeta(meta -> meta.itemName(name));
