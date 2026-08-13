@@ -14,6 +14,7 @@ public class WriteEventHandler implements Listener {
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
+        if (Write.RESOURCE_PACKS.isEmpty()) return;
         event.getPlayer().sendResourcePacks(ResourcePackRequest.resourcePackRequest()
                         .packs(Write.RESOURCE_PACKS)
                         .prompt(Component.text("This server uses Write, a library for creating custom items and blocks. You need to download the resource pack to see the custom content."))

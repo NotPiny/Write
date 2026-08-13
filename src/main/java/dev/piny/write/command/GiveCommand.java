@@ -19,6 +19,7 @@ import java.util.List;
 public class GiveCommand {
     public LiteralCommandNode<CommandSourceStack> create() {
         return Commands.literal("give")
+                .requires(source -> source.getSender().hasPermission("write.give"))
                 .then(
                         Commands.argument("targets", ArgumentTypes.players())
                                 .then(

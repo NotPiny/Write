@@ -20,7 +20,7 @@ import java.util.List;
 
 public class GenericBlockInstancePersistTask {
     private static void log(String message) {
-        if (Write.getInstance().getConfig().getBoolean("tasks.persist_block_instances.log", false)) Write.getInstance().getLogger().info("[GenericBlockInstancePersistTask] " + message);
+        if (Write.getInstance().getConfig().getBoolean("tasks.block.persist_block_instances.log", false)) Write.getInstance().getLogger().info("[GenericBlockInstancePersistTask] " + message);
     }
 
     public static void save() {

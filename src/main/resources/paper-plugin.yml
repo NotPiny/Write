@@ -11,3 +11,8 @@ load: POSTWORLD
 
 authors: [ Ember <piny.dev> ]
 website: https://modrinth.com/plugin/write
+
+permissions:
+  write.give:
+    description: Allows the player to use the /write give command
+    default: op

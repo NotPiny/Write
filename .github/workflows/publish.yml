@@ -62,6 +62,26 @@ jobs:
           prerelease: false
           files: build/libs/Write-${{ steps.get_version.outputs.version }}.jar
 
+      - name: Publish to Modrinth
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          modrinth-id: ${{ secrets.MODRINTH_PROJECT_ID }}
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+
+          files: build/libs/Write-${{ steps.get_version.outputs.version }}.jar
+
+          name: Write v${{ steps.get_version.outputs.version }}
+          version: ${{ steps.get_version.outputs.version }}
+          version-type: release
+
+          loaders: |
+            paper
+            purpur
+
+          game-versions: |
+            26.2
+
       - name: Skip - Tag already exists
         if: steps.check_tag.outputs.exists == 'true'
         run: |

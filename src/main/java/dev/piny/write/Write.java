@@ -99,7 +99,7 @@ public final class Write extends JavaPlugin {
             String hostMethod = getConfig().getString("pack.host.method", "none");
             getLogger().info("Starting resource pack host method: " + hostMethod + " after " + getConfig().getLong("pack.host.scan_delay_ticks", 200L) + " ticks.");
 
-            Bukkit.getScheduler().runTaskLater(this, () -> {
+            Bukkit.getScheduler().runTaskLaterAsynchronously(this, () -> {
                 for (Plugin plugin : Bukkit.getPluginManager().getPlugins()) {
                     Path ownWriteZip = Paths.get(plugin.getDataFolder().toString(), "write.zip");
                     boolean hasOwnWriteZip = Files.exists(ownWriteZip);

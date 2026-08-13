@@ -37,6 +37,7 @@ tasks {
 
         downloadPlugins {
             modrinth("evkiwA7V", "Ow8CJ6pP") // Axiom
+            modrinth("Vebnzrzj", "b0mk8uS6") // LuckPerms
         }
     }
 
