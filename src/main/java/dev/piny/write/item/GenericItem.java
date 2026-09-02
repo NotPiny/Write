@@ -8,6 +8,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -121,6 +122,19 @@ public class GenericItem {
         Bukkit.getLogger().info("[Write/" + pluginName + "] Registered item: " + key + " with name: " + name + " and max stack size: " + maxStackSize);
 
         Write.ITEM_REGISTRY.add(this);
+    }
+
+    public static GenericItem getInstance(@NotNull ItemStack itemStack) {
+        if (itemStack.getItemMeta() == null || itemStack.getItemMeta().getItemModel() == null) return null;
+
+        NamespacedKey itemModel = itemStack.getItemMeta().getItemModel();
+        for (GenericItem genericItem : Write.ITEM_REGISTRY) {
+            if (genericItem.key().equals(itemModel)) {
+                return genericItem;
+            }
+        }
+
+        return null;
     }
 
     /**

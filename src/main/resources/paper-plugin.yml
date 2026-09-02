@@ -7,7 +7,7 @@ main: dev.piny.write.Write
 bootstrapper: dev.piny.write.WriteBootstrap
 loader: dev.piny.write.WriteLoader
 api-version: '26.2'
-load: POSTWORLD
+load: STARTUP
 
 authors: [ Ember <piny.dev> ]
 website: https://modrinth.com/plugin/write
@@ -15,4 +15,7 @@ website: https://modrinth.com/plugin/write
 permissions:
   write.give:
     description: Allows the player to use the /write give command
+    default: op
+  write.integration:
+    description: Allows the player to use the /write integration command - This is meant for data pack creators and plugin developers
     default: op

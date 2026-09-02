@@ -1,6 +1,7 @@
 package dev.piny.write.block;
 
 import dev.piny.write.Write;
+import dev.piny.write.event.BlockRegisterEvent;
 import dev.piny.write.item.GenericItem;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
@@ -18,6 +19,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.ApiStatus;
 import org.joml.AxisAngle4f;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
@@ -55,6 +57,32 @@ public class GenericBlock {
     private boolean rotatable = true;
     private final HashMap<UUID, Long> lastInteractTimes = new HashMap<>();
 
+    @ApiStatus.Internal
+    @Nullable
+    public static GenericBlockInstance createInstanceFromDisplay(ItemDisplay itemDisplay) {
+        for (GenericBlockInstance instance : Write.BLOCK_INSTANCES) {
+            if (instance.itemDisplayId().equals(itemDisplay.getUniqueId())) {
+                return instance;
+            }
+        }
+
+        if (itemDisplay.getItemStack().getItemMeta() == null || itemDisplay.getItemStack().getItemMeta().getItemModel() == null) {
+            return null;
+        }
+
+        NamespacedKey key = itemDisplay.getItemStack().getItemMeta().getItemModel();
+        NamespacedKey blockKey = new NamespacedKey(key.getNamespace(), key.getKey().replace("block/", ""));
+        GenericBlock matchedBlock = Write.BLOCK_REGISTRY.stream()
+                .filter(block -> block.key().equals(blockKey))
+                .findFirst()
+                .orElse(null);
+
+        if (matchedBlock == null) return null;
+
+        GenericBlockInstance newInstance = new GenericBlockInstance(matchedBlock, itemDisplay.getLocation(), itemDisplay);
+        Write.BLOCK_INSTANCES.add(newInstance);
+        return newInstance;
+    }
 
     private boolean isPlaceable(PlayerInteractEvent event) {
         boolean initial = true;
@@ -160,6 +188,8 @@ public class GenericBlock {
         Write.BLOCK_REGISTRY.add(this);
         this.item.name(Component.translatable("block." + this.key.getNamespace() + "." + this.key.getKey()));
         this.item.register();
+
+        Bukkit.getServer().getPluginManager().callEvent(new BlockRegisterEvent(this));
     }
 
     public NamespacedKey key() {

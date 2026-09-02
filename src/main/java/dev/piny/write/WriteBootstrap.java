@@ -1,10 +1,13 @@
 package dev.piny.write;
 
 import dev.piny.write.command.GiveCommand;
+import dev.piny.write.command.IntegrationCommand;
 import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.plugin.bootstrap.BootstrapContext;
 import io.papermc.paper.plugin.bootstrap.PluginBootstrap;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
+
+import java.util.List;
 
 class WriteBootstrap implements PluginBootstrap {
 
@@ -16,13 +19,12 @@ class WriteBootstrap implements PluginBootstrap {
                     .then(
                             new GiveCommand().create()
                     )
-                    .build());
-
-            commands.registrar().register(Commands.literal("wr")
                     .then(
-                            new GiveCommand().create()
+                            new IntegrationCommand().create()
                     )
-                    .build());
+                    .build(),
+                    List.of("wr")
+            );
         });
     }
 }
