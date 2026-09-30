@@ -1,6 +1,7 @@
 package dev.piny.write.block;
 
 import dev.piny.write.Write;
+import dev.piny.write.tasks.GenericBlockInstancePersistTask;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
@@ -21,6 +22,8 @@ public class GenericBlockEventHandler implements Listener {
     private void removeInstance(GenericBlockInstance instance) {
         Write.BLOCK_INSTANCES.remove(instance);
         if (instance.itemDisplay() != null) instance.itemDisplay().remove();
+
+        GenericBlockInstancePersistTask.scheduleSave(Write.getInstance().getConfig().getLong("tasks.block.persist_block_instances.on_break_delay", 20L));
     }
 
     @EventHandler

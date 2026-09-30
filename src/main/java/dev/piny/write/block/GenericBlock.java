@@ -3,6 +3,7 @@ package dev.piny.write.block;
 import dev.piny.write.Write;
 import dev.piny.write.event.BlockRegisterEvent;
 import dev.piny.write.item.GenericItem;
+import dev.piny.write.tasks.GenericBlockInstancePersistTask;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -101,7 +102,7 @@ public class GenericBlock {
         return this.canPlace.test(event, initial);
     }
 
-    public GenericBlock(NamespacedKey key) {
+    public GenericBlock(NamespacedKey key) { // TODO: On 26.3 make this a regular item with a use_animation component instead of a block. Either that or just figure out some method to ensure better compatibility when dropped
         this.key = key;
         this.item = new GenericItem(key);
 
@@ -109,7 +110,7 @@ public class GenericBlock {
 
         this.item.onInteract(event -> {
             if (!event.getAction().isRightClick()) return;
-            // Bukkit fires a PlayerInteractEvent for both the main hand and the off hand on a
+            // Bukkit fires a PlayerInteractEvent for both the main hand and the offhand on a
             // single right click, so only handle the main hand event to avoid placing twice.
             if (event.getHand() != EquipmentSlot.HAND) return;
 
@@ -131,6 +132,7 @@ public class GenericBlock {
 
             ItemDisplay itemDisplay = blockLocation.getWorld().spawn(blockLocation.add(0.5, 0.5, 0.5), ItemDisplay.class);
             itemDisplay.setItemStack(Bukkit.getServer().getItemFactory().createItemStack("structure_void[item_model=\""+ this.key.getNamespace() + ":block/" + this.key.getKey() + "\"]"));
+            itemDisplay.setViewRange(itemDisplay.getWorld().getViewDistance() * 16); // Unsure of if this works, but it doesn't break stuff so
 
             float rotationYaw = 0f;
             if (this.rotatable) {
@@ -175,12 +177,16 @@ public class GenericBlock {
 
             Write.BLOCK_INSTANCES.add(new GenericBlockInstance(this, blockLocation, itemDisplay));
 
-            assert event.getItem() != null;
-            if (!event.getPlayer().getGameMode().equals(GameMode.CREATIVE)) event.getPlayer().getInventory().getItemInMainHand().setAmount(event.getItem().getAmount() - 1);
+            if (!event.getPlayer().getGameMode().equals(GameMode.CREATIVE)) {
+                assert event.getItem() != null; // Pretty sure it's impossible for this to be null, but IDEA is complaining.
+                event.getPlayer().getInventory().getItemInMainHand().setAmount(event.getItem().getAmount() - 1);
+            }
 
             onInteract.accept(event);
 
             if (this.onPlace != null) this.onPlace.accept(event);
+
+            GenericBlockInstancePersistTask.scheduleSave(Write.getInstance().getConfig().getLong("tasks.block.persist_block_instances.on_place_delay", 20L));
         });
     }
 

@@ -71,6 +71,8 @@ public class IntegrationCommand {
             });
         }
 
+        newItem.register();
+
         return 1;
     }
 }

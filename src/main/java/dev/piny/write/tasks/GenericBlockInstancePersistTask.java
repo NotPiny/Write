@@ -11,6 +11,7 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.ItemDisplay;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.lang.reflect.Type;
 import java.nio.file.Files;
@@ -21,6 +22,22 @@ import java.util.List;
 public class GenericBlockInstancePersistTask {
     private static void log(String message) {
         if (Write.getInstance().getConfig().getBoolean("tasks.block.persist_block_instances.log", false)) Write.getInstance().getLogger().info("[GenericBlockInstancePersistTask] " + message);
+    }
+
+    private static BukkitTask pendingSave;
+
+    public static void scheduleSave(long delayTicks) {
+        if (pendingSave != null && !pendingSave.isCancelled()) pendingSave.cancel();
+        pendingSave = Bukkit.getScheduler().runTaskLater(Write.getInstance(), () -> {
+            pendingSave = null;
+            log("Saving block instances (debounced save)...");
+            save();
+            log("Saved " + Write.BLOCK_INSTANCES.size() + " block instances.");
+        }, delayTicks);
+    }
+
+    public static boolean isSaveScheduled() {
+        return pendingSave != null && !pendingSave.isCancelled();
     }
 
     public static void save() {

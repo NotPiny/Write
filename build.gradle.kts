@@ -10,11 +10,15 @@ repositories {
         name = "faststatsReleases"
         url = uri("https://repo.faststats.dev/releases")
     }
+    maven {
+        url = uri("https://jitpack.io")
+    }
 }
 
 dependencies {
     paperweight.paperDevBundle("26.2.build.+")
     implementation("dev.faststats.metrics:bukkit:0.29.4")
+    compileOnly("dev.piny:PineLib:v1.6.0")
 }
 
 java {
@@ -36,8 +40,10 @@ tasks {
         jvmArgs("-Xms2G", "-Xmx2G", "-XX:+AllowEnhancedClassRedefinition", "-Dcom.mojang.eula.agree=true")
 
         downloadPlugins {
-            modrinth("evkiwA7V", "Ow8CJ6pP") // Axiom
+            modrinth("evkiwA7V", "93qRRLuz") // Axiom
             modrinth("Vebnzrzj", "b0mk8uS6") // LuckPerms
+
+            modrinth("WyvElY84", "8prnrXsE") // PineLib
         }
     }
 

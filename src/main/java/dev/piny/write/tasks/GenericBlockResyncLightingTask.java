@@ -33,7 +33,8 @@ public class GenericBlockResyncLightingTask {
                 block.getRelative(0, 1, 0),
                 block.getRelative(0, -1, 0),
                 block.getRelative(0, 0, 1),
-                block.getRelative(0, 0, -1)
+                block.getRelative(0, 0, -1),
+                block // If the block is transparent it should still have light, so we'll check it too (only triggers if non-default material)
         }) {
             maxBlockLight = Math.max(maxBlockLight, neighbour.getLightFromBlocks());
             maxSkyLight = Math.max(maxSkyLight, neighbour.getLightFromSky());

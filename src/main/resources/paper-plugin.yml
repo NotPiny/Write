@@ -19,3 +19,12 @@ permissions:
   write.integration:
     description: Allows the player to use the /write integration command - This is meant for data pack creators and plugin developers
     default: op
+  write.manage:
+    description: Allows the player to use the /write manage command - server management/administration commands
+    default: op
+
+dependencies:
+  server:
+    PineLib:
+      required: false
+      load: BEFORE

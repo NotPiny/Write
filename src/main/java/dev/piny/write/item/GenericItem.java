@@ -8,9 +8,10 @@ import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 
@@ -111,11 +112,16 @@ public class GenericItem {
         String pluginName = key.getNamespace();
 
         if (Bukkit.getPluginManager().getPlugin(pluginName) == null) {
+            // PluginManager#getPlugin(String) only matches a plugin's declared name.
             for (StackTraceElement stackTraceElement : Thread.currentThread().getStackTrace()) {
-                if (Bukkit.getPluginManager().getPlugin(stackTraceElement.getClassName()) != null) {
-                    pluginName = Objects.requireNonNull(Bukkit.getPluginManager().getPlugin(stackTraceElement.getClassName())).getName();
-                    break;
-                }
+                try {
+                    Class<?> callerClass = Class.forName(stackTraceElement.getClassName(), false, GenericItem.class.getClassLoader());
+                    Plugin providingPlugin = JavaPlugin.getProvidingPlugin(callerClass);
+                    if (providingPlugin != Write.getInstance()) {
+                        pluginName = providingPlugin.getName();
+                        break;
+                    }
+                } catch (Throwable _) {}
             }
         }
 

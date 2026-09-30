@@ -2,9 +2,11 @@ pack:
   host:
     # Method used to host any applicable resource packs.
     # Options:
-    # "cloud" - Resource packs will be sent to mcpacks.dev. No affiliation, just happens to provide programmatic pack hosting. (default)
+    # "auto" - Tries local hosting first, and falls back to cloud hosting if dependencies are not met. (default)
+    # "cloud" - Resource packs will be sent to mcpacks.dev. No affiliation, just happens to provide programmatic pack hosting.
+    # "local" - Resource packs will be hosted on the server itself. Falls back to "none" if PineLib is not installed. (https://modrinth.com/plugin/pinelib)
     # "none" - Resource packs will not be hosted. Players will need to manually download and install the resource pack, or you need to provide your own hosting solution.
-    method: "cloud"
+    method: "auto"
     # The delay in ticks after Write fully loads before scanning for resource packs.
     scan_delay_ticks: 200
 
