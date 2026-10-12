@@ -18,7 +18,7 @@ class WriteBootstrap implements PluginBootstrap {
     @Override
     public void bootstrap(final BootstrapContext context) {
         // Plugin bootstrap logic
-        boolean isDev = !System.getProperty("xyz.jpenilla.run-task", "false").equals("false");
+        boolean isDev = Write.isDevelopmentMode();
 
         context.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, commands -> {
             LiteralArgumentBuilder<CommandSourceStack> nodes = Commands.literal("write")

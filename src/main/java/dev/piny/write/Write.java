@@ -11,10 +11,13 @@ import dev.piny.write.block.GenericBlockInstance;
 import dev.piny.write.item.GenericItem;
 import dev.piny.write.item.GenericItemEventHandler;
 import dev.piny.write.network.ResourcePackRequestHandler;
+import dev.piny.write.rp.PackScaffoldingProcessStep;
 import dev.piny.write.tasks.GenericBlockInstancePersistTask;
 import dev.piny.write.tasks.GenericBlockResyncLightingTask;
 import dev.piny.write.util.HostablePack;
 import dev.piny.write.util.McPacksUploader;
+import dev.piny.write.util.PackProcessor;
+import dev.piny.write.util.ResourcePackWatcher;
 import net.kyori.adventure.resource.ResourcePackInfo;
 import net.kyori.adventure.resource.ResourcePackRequest;
 import net.kyori.adventure.text.Component;
@@ -48,6 +51,7 @@ public final class Write extends JavaPlugin {
             .create();
 
     private String hostMethod = "none";
+    private boolean autoRescanEnabled = false;
 
     /**
      * A registry of all GenericItems that have been registered. This is used to keep track of all items and their associated data.
@@ -89,6 +93,9 @@ public final class Write extends JavaPlugin {
         saveDefaultConfig();
         hostMethod = getConfig().getString("pack.host.method", "none");
 
+        Object rpAutoRescanRaw = getConfig().get("development.rp-auto-rescan");
+        autoRescanEnabled = rpAutoRescanRaw instanceof Boolean raw ? raw : isDevelopmentMode();
+
         if (!Files.exists(Paths.get(getDataFolder().toString(), "data"))) {
             getLogger().warning("Data folder does not exist, creating...");
             try {
@@ -111,6 +118,8 @@ public final class Write extends JavaPlugin {
         if (loadDelay >= getConfig().getLong("tasks.block.persist_block_instances.start_delay_ticks", 2400L) - 100) loadDelay = getConfig().getLong("tasks.block.persist_block_instances.start_delay_ticks", 2400L) - 100;
 
         Bukkit.getScheduler().runTaskLater(this, GenericBlockInstancePersistTask::load, loadDelay);
+
+        PackProcessor.registerStep(PackScaffoldingProcessStep::processScaffoldConfig);
 
         if (!getConfig().getString("pack.host.method", "none").equals("none")) {
             getLogger().info("Starting resource pack host method: " + hostMethod + " after " + getConfig().getLong("pack.host.scan_delay_ticks", 200L) + " ticks.");
@@ -155,25 +164,52 @@ public final class Write extends JavaPlugin {
         Path ownWriteZip = Paths.get(plugin.getDataFolder().toString(), "write.zip");
         boolean hasOwnWriteZip = Files.exists(ownWriteZip); // This name has confused me so many times, but I can't think of anything better
 
-        // Own write.zip always takes priority, only open the bundled resource if we need it.
-        InputStream bundledWriteZip = hasOwnWriteZip ? null : plugin.getResource("write.zip");
+        // The data folder (zip or folder) always overrides the bundled jar resource, only open it if we need it.
+        Path ownWriteFolder = Paths.get(plugin.getDataFolder().toString(), "write");
+        boolean hasOwnWriteFolder = !hasOwnWriteZip
+                && Files.isDirectory(ownWriteFolder)
+                && Files.exists(ownWriteFolder.resolve("pack.mcmeta"));
+
+        InputStream bundledWriteZip = (hasOwnWriteZip || hasOwnWriteFolder) ? null : plugin.getResource("write.zip");
         boolean hasBundledWriteZip = bundledWriteZip != null;
 
-        if (!hasOwnWriteZip && !hasBundledWriteZip) {
+        if (!hasOwnWriteZip && !hasOwnWriteFolder && !hasBundledWriteZip) {
             return;
         }
 
-        getLogger().info("Found write.zip in plugin " + plugin.getName() + ", registering resource pack.");
+        Path packPath;
+        if (hasOwnWriteZip) {
+            getLogger().info("Found write.zip in plugin " + plugin.getName() + ", registering resource pack.");
+            packPath = ownWriteZip;
+        } else if (hasOwnWriteFolder) {
+            getLogger().info("Found write folder (no zip) in plugin " + plugin.getName() + ", registering resource pack.");
 
-        Path packPath = ownWriteZip;
-        if (!hasOwnWriteZip) {
-            Path extractedPacksDir = Paths.get(getDataFolder().toString(), "extracted_packs");
+            if (autoRescanEnabled) {
+                ResourcePackWatcher.watch(plugin, ownWriteFolder);
+            }
+
+            Path extractedPacksDir;
+            try {
+                extractedPacksDir = ensureExtractedPacksDir();
+            } catch (IOException e) {
+                getLogger().severe("Failed to create extracted_packs folder: " + e.getMessage());
+                return;
+            }
+
+            packPath = extractedPacksDir.resolve(plugin.getName() + ".zip");
 
             try {
-                if (!Files.exists(extractedPacksDir)) {
-                    Files.createDirectories(extractedPacksDir);
-                    Files.writeString(extractedPacksDir.resolve("readme.txt"), "Hello! This folder is used by the Write plugin to store extracted resource packs from other plugins if they don't have a write.zip in their own folder.");
-                }
+                PackProcessor.zipDirectory(ownWriteFolder, packPath);
+            } catch (IOException e) {
+                getLogger().severe("Failed to zip write folder for plugin " + plugin.getName() + ": " + e.getMessage());
+                return;
+            }
+        } else {
+            getLogger().info("Found write.zip in plugin " + plugin.getName() + ", registering resource pack.");
+
+            Path extractedPacksDir;
+            try {
+                extractedPacksDir = ensureExtractedPacksDir();
             } catch (IOException e) {
                 getLogger().severe("Failed to create extracted_packs folder: " + e.getMessage());
                 try {
@@ -192,6 +228,12 @@ public final class Write extends JavaPlugin {
                 getLogger().severe("Failed to extract write.zip for plugin " + plugin.getName() + ": " + e.getMessage());
                 return;
             }
+        }
+
+        Path compiledPath = PackProcessor.process(packPath, plugin.getName());
+        if (compiledPath == null) {
+            getLogger().severe("Failed to compile resource pack for plugin " + plugin.getName() + ", skipping.");
+            return;
         }
 
         // Anything touching players/entities has to run on the main thread because Bukkit is weird like that. Pretty sure it does still include sending resource packs
@@ -223,14 +265,14 @@ public final class Write extends JavaPlugin {
             try {
                 // Reused cache (not RESOURCE_PACKS) so this stays safe to read off the main thread,
                 // and so a rescan skips re-uploading to mcpacks.dev if the file hasn't changed.
-                String currentHash = HostablePack.getSha1Hash(packPath.toFile());
+                String currentHash = HostablePack.getSha1Hash(compiledPath.toFile());
                 ResourcePackInfo cached = uploadedPackCache.get(plugin.getName());
 
                 ResourcePackInfo packInfo;
                 if (cached != null && currentHash.equals(cached.hash())) {
                     packInfo = cached;
                 } else {
-                    McPacksUploader.UploadResponse response = McPacksUploader.upload(packPath.toFile());
+                    McPacksUploader.UploadResponse response = McPacksUploader.upload(compiledPath.toFile());
 
                     packInfo = ResourcePackInfo.resourcePackInfo()
                             .id(UUID.fromString(response.data.uuid))
@@ -260,15 +302,31 @@ public final class Write extends JavaPlugin {
         }
     }
 
+    private Path ensureExtractedPacksDir() throws IOException {
+        Path extractedPacksDir = Paths.get(getDataFolder().toString(), "extracted_packs");
+
+        if (!Files.exists(extractedPacksDir)) {
+            Files.createDirectories(extractedPacksDir);
+            Files.writeString(extractedPacksDir.resolve("readme.txt"), "Hello! This folder is used by the Write plugin to store extracted resource packs from other plugins if they don't have a write.zip in their own folder.");
+        }
+
+        return extractedPacksDir;
+    }
+
     @Override
     public void onDisable() {
         context.shutdown();
         // Plugin shutdown logic
+        ResourcePackWatcher.shutdown();
         GenericBlockInstancePersistTask.save();
     }
 
     public static Write getInstance() {
         return JavaPlugin.getPlugin(Write.class);
+    }
+
+    public static boolean isDevelopmentMode() {
+        return !System.getProperty("xyz.jpenilla.run-task", "false").equals("false");
     }
 
     public static ItemStack getItemStack(String item) {

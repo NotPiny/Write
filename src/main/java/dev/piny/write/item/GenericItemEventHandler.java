@@ -6,7 +6,6 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.EquipmentSlot;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -18,9 +17,6 @@ public class GenericItemEventHandler implements Listener {
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
         if (event.getItem() == null || event.getItem().getItemMeta() == null) return;
-        // Bukkit fires a PlayerInteractEvent for both the main hand and the off hand on a single right click,
-        // so only handle the main hand event to avoid invoking onInteract twice.
-        if (event.getHand() != EquipmentSlot.HAND) return;
 
         AtomicBoolean found = new AtomicBoolean(false);
 
@@ -28,8 +24,11 @@ public class GenericItemEventHandler implements Listener {
                 .filter(item -> item.key().equals(event.getItem().getItemMeta().getItemModel()))
                 .findFirst()
                 .ifPresent(item -> {
-                    item.onInteract().accept(event);
                     found.set(true);
+                    // Bukkit fires a PlayerInteractEvent for both the main hand and the off hand on a single
+                    // right click, so only handle one of them to avoid invoking onInteract twice.
+                    if (!GenericItem.shouldHandle(event, item.key())) return;
+                    item.onInteract().accept(event);
                 });
 
         if (found.get()) {
@@ -45,6 +44,9 @@ public class GenericItemEventHandler implements Listener {
                     .filter(block -> block.key().equals(blockKey))
                     .findFirst()
                     .ifPresent(block -> {
+                        // Bukkit fires a PlayerInteractEvent for both the main hand and the off hand on a single
+                        // right click, so only handle one of them to avoid invoking onInteract twice.
+                        if (!GenericItem.shouldHandle(event, block.key())) return;
                         block.item().onInteract().accept(event);
                     });
         }

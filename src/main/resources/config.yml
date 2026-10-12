@@ -31,6 +31,16 @@ cooldowns:
   block:
     place_delay_ms: 100
 
+development:
+  # Different features to aid in developing addons for Write.
+  # null - May automatically turn on/off depending on the environment.
+  # true - Always on.
+  # false - Always off.
+  
+  # Automatically rescan resource packs when a folder-based resource pack is changed on disk.
+  # null - Defaults to true if running in a development environment (e.g. via the run-paper Gradle task), false otherwise.
+  rp-auto-rescan: null
+
 # You probably shouldn't change these values unless you really know what you're doing.
 meta:
   checkpoints:

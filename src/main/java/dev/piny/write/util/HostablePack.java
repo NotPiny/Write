@@ -2,8 +2,6 @@ package dev.piny.write.util;
 
 import dev.piny.write.Write;
 import net.kyori.adventure.resource.ResourcePackInfo;
-import org.bukkit.Bukkit;
-import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.Nullable;
 
@@ -44,13 +42,7 @@ public record HostablePack(@NotNull String name, @Nullable ResourcePackInfo reso
     }
 
     public static File resolvePackFile(String pluginName) {
-        Plugin plugin = Bukkit.getPluginManager().getPlugin(pluginName);
-        if (plugin != null) {
-            File ownWriteZip = Paths.get(plugin.getDataFolder().toString(), "write.zip").toFile();
-            if (ownWriteZip.exists()) return ownWriteZip;
-        }
-
-        return Paths.get(Write.getInstance().getDataFolder().toString(), "extracted_packs", pluginName + ".zip").toFile();
+        return Paths.get(Write.getInstance().getDataFolder().toString(), "compiled_packs", pluginName + ".zip").toFile();
     }
 
     public String hash() {

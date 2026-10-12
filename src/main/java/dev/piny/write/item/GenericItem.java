@@ -7,10 +7,13 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
@@ -148,5 +151,23 @@ public class GenericItem {
      */
     public void handleInteract(PlayerInteractEvent event) {
         onInteract.accept(event);
+    }
+
+    @ApiStatus.Internal
+    @Nullable
+    private static NamespacedKey normalisedModelKey(@Nullable ItemStack itemStack) {
+        if (itemStack == null || itemStack.getItemMeta() == null) return null;
+        NamespacedKey itemModel = itemStack.getItemMeta().getItemModel();
+        if (itemModel == null) return null;
+        return new NamespacedKey(itemModel.getNamespace(), itemModel.getKey().replace("block/", ""));
+    }
+
+    @ApiStatus.Internal
+    public static boolean shouldHandle(PlayerInteractEvent event, NamespacedKey key) {
+        if (event.getHand() == EquipmentSlot.HAND) return true;
+        if (event.getHand() != EquipmentSlot.OFF_HAND) return false;
+
+        NamespacedKey mainHandKey = normalisedModelKey(event.getPlayer().getInventory().getItemInMainHand());
+        return !key.equals(mainHandKey);
     }
 }

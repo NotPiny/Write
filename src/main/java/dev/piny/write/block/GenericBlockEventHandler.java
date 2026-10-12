@@ -1,7 +1,7 @@
 package dev.piny.write.block;
 
 import dev.piny.write.Write;
-import dev.piny.write.tasks.GenericBlockInstancePersistTask;
+import dev.piny.write.item.GenericItem;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
@@ -12,7 +12,6 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.EquipmentSlot;
 
 public class GenericBlockEventHandler implements Listener {
     public GenericBlockEventHandler() {
@@ -23,7 +22,6 @@ public class GenericBlockEventHandler implements Listener {
         Write.BLOCK_INSTANCES.remove(instance);
         if (instance.itemDisplay() != null) instance.itemDisplay().remove();
 
-        GenericBlockInstancePersistTask.scheduleSave(Write.getInstance().getConfig().getLong("tasks.block.persist_block_instances.on_break_delay", 20L));
     }
 
     @EventHandler
@@ -100,14 +98,14 @@ public class GenericBlockEventHandler implements Listener {
     @EventHandler
     public void onBlockInteracted(PlayerInteractEvent event) {
         if (event.getClickedBlock() == null) return;
-        // Bukkit fires a PlayerInteractEvent for both the main hand and the offhand on a single
-        // right click, so only handle the main hand event to avoid invoking onInteract twice.
-        if (event.getHand() != EquipmentSlot.HAND) return;
 
         Write.BLOCK_INSTANCES.stream()
                 .filter(instance -> instance.location().equals(event.getClickedBlock().getLocation().clone().add(0.5, 0.5, 0.5)))
                 .findAny()
                 .ifPresent(instance -> {
+                    // Bukkit fires a PlayerInteractEvent for both the main hand and the offhand on a single
+                    // right click, so only handle one of them to avoid invoking onInteract twice.
+                    if (!GenericItem.shouldHandle(event, instance.block().key())) return;
                     if (instance.block().onInteract() != null) instance.block().onInteract().accept(event);
                 });
     }

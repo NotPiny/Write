@@ -17,7 +17,6 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.ApiStatus;
@@ -111,8 +110,8 @@ public class GenericBlock {
         this.item.onInteract(event -> {
             if (!event.getAction().isRightClick()) return;
             // Bukkit fires a PlayerInteractEvent for both the main hand and the offhand on a
-            // single right click, so only handle the main hand event to avoid placing twice.
-            if (event.getHand() != EquipmentSlot.HAND) return;
+            // single right click, so only handle one of them to avoid placing twice.
+            if (!GenericItem.shouldHandle(event, this.key)) return;
 
             // I think this is a remnant from when blocks were also popped_chorus_fruit, but now they're all structure_void, so this check is mostly redundant.
             // Guess it still helps for modded clients.
@@ -179,7 +178,8 @@ public class GenericBlock {
 
             if (!event.getPlayer().getGameMode().equals(GameMode.CREATIVE)) {
                 assert event.getItem() != null; // Pretty sure it's impossible for this to be null, but IDEA is complaining.
-                event.getPlayer().getInventory().getItemInMainHand().setAmount(event.getItem().getAmount() - 1);
+                assert event.getHand() != null;
+                event.getPlayer().getInventory().getItem(event.getHand()).setAmount(event.getItem().getAmount() - 1);
             }
 
             onInteract.accept(event);

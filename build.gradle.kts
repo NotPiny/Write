@@ -16,7 +16,7 @@ repositories {
 }
 
 dependencies {
-    paperweight.paperDevBundle("26.2.build.+")
+    paperweight.paperDevBundle("26.3.build.+")
     implementation("dev.faststats.metrics:bukkit:0.29.4")
     compileOnly("dev.piny:PineLib:v1.6.0")
 }
@@ -35,12 +35,13 @@ tasks {
         // Configure the Minecraft version for our task.
         // This is the only required configuration besides applying the plugin.
         // Your plugin's jar (or shadowJar if present) will be used automatically.
-        minecraftVersion("26.2")
+        minecraftVersion("26.3")
         javaLauncher = serverLauncher
         jvmArgs("-Xms2G", "-Xmx2G", "-XX:+AllowEnhancedClassRedefinition", "-Dcom.mojang.eula.agree=true")
 
         downloadPlugins {
             modrinth("evkiwA7V", "93qRRLuz") // Axiom
+            modrinth("z4HZZnLr", "A1gBu4MM") // FAWE
             modrinth("Vebnzrzj", "b0mk8uS6") // LuckPerms
 
             modrinth("WyvElY84", "8prnrXsE") // PineLib
