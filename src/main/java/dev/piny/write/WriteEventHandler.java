@@ -6,7 +6,10 @@ import dev.piny.write.block.GenericBlock;
 import dev.piny.write.block.GenericBlockInstance;
 import dev.piny.write.event.BlockRegisterEvent;
 import dev.piny.write.util.HostablePack;
+import io.papermc.paper.event.connection.configuration.AsyncPlayerConnectionConfigureEvent;
 import io.papermc.paper.event.player.PlayerPickBlockEvent;
+import net.kyori.adventure.audience.Audience;
+import net.kyori.adventure.resource.ResourcePackCallback;
 import net.kyori.adventure.resource.ResourcePackInfo;
 import net.kyori.adventure.resource.ResourcePackRequest;
 import net.kyori.adventure.text.Component;
@@ -19,17 +22,19 @@ import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.world.AsyncStructureGenerateEvent;
+import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
-import org.bukkit.util.EntityTransformer;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class WriteEventHandler implements Listener {
     public WriteEventHandler() {
@@ -37,11 +42,23 @@ public class WriteEventHandler implements Listener {
     }
 
     HashMap<UUID, NamespacedKey> unknownBlockEntities = new HashMap<>();
+    public static final HashMap<UUID, String> playerHostnames = new HashMap<>();
 
     @EventHandler
-    public void onPlayerJoin(PlayerJoinEvent event) {
-        if (Write.RESOURCE_PACKS.isEmpty()) return;
+    public void onPlayerPreLogin(AsyncPlayerPreLoginEvent event) {
+        playerHostnames.put(event.getUniqueId(), event.getHostname().split(":")[0]);
+    }
 
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        playerHostnames.remove(event.getPlayer().getUniqueId());
+    }
+
+    @EventHandler
+    public void onPlayerConnectionConfigure(AsyncPlayerConnectionConfigureEvent event) throws InterruptedException {
+        if (Write.RESOURCE_PACKS.isEmpty()) return;
+        Audience audience = event.getConnection().getAudience();
+        String joinedHostname = playerHostnames.get(event.getConnection().getProfile().getId());
         ArrayList<ResourcePackInfo> packs = new ArrayList<>();
 
         for (HostablePack pack : Write.RESOURCE_PACKS) {
@@ -49,19 +66,40 @@ public class WriteEventHandler implements Listener {
                 packs.add(pack.resourcePackInfo());
             } else {
                 try {
-                    ResourcePackInfo info = ResourcePackInfo.resourcePackInfo(pack.uuid(), new URI(NetworkUtils.buildBaseUrl(event.getPlayer()) + "/write/hosted_packs/" + pack.name()), pack.hash());
+                    ResourcePackInfo info = ResourcePackInfo.resourcePackInfo(pack.uuid(), new URI(joinedHostname.equals("localhost") ? "http://localhost:%s".formatted(NetworkUtils.getPort()) : NetworkUtils.buildBaseUrl(null) + "/write/hosted_packs/" + pack.name()), pack.hash());
                     packs.add(info);
                 } catch (URISyntaxException e) {
-                    throw new RuntimeException("Failed to build resource pack URL for pack '" + pack.name() + "' for player " + event.getPlayer().getName(), e);
+                    throw new RuntimeException("Failed to build resource pack URL for pack '" + pack.name() + "' for player " + event.getConnection().getProfile().getName(), e);
                 }
             }
         }
 
-        event.getPlayer().sendResourcePacks(ResourcePackRequest.resourcePackRequest()
+        var latch = new CountDownLatch(1);
+        AtomicBoolean accepted = new AtomicBoolean(false);
+
+        audience.sendResourcePacks(ResourcePackRequest.resourcePackRequest()
                         .packs(packs)
                         .prompt(Component.text("This server uses Write, a library for creating custom items and blocks. You need to download the resource pack to see the custom content."))
                         .required(true)
+                        .callback(
+                                ResourcePackCallback.onTerminal(
+                                        (uuid, a) -> {
+                                            accepted.set(true);
+                                            latch.countDown();
+                                        },
+                                        (uuid, a) -> { // Rejected
+                                            Write.getInstance().getLogger().warning("Player " + event.getConnection().getProfile().getName() + " rejected the resource pack.");
+                                            latch.countDown();
+                                        }
+                                )
+                        )
                 .asResourcePackRequest());
+
+        latch.await(15L, TimeUnit.SECONDS); // blocks until countDown is called or timeout is reached
+
+        if (!accepted.get()) {
+            event.getConnection().disconnect(Component.text("You must accept the resource pack to play on this server. If you have, try rejoining."));
+        }
     }
 
     @EventHandler
